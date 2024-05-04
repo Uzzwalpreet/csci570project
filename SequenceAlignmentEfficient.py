@@ -47,7 +47,7 @@ class SequenceAlignmentMemoryEfficient:
                                 opt[i - 1][j] + self.gap_penalty,
                                 opt[i][j - 1] + self.gap_penalty)
 
-        return opt[m][n]
+        return opt
 
     def reconstruct_alignment(self, table, s1, s2):
         i = len(table) - 1
