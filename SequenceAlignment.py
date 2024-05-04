@@ -1,3 +1,6 @@
+import os
+
+
 class SequenceAlignment:
     def __init__(self):
         self.gap_penalty = 30
@@ -182,7 +185,15 @@ try:
         aligner = SequenceAlignment()
         opt, alignment_cost = aligner.compute_minimum_alignment_cost(
             arr[0], arr[1])
+        print("Alignm,nt cost is", alignment_cost)
         aligns1, aligns2 = aligner.reconstruct_alignment(opt, arr[0], arr[1])
+        output_file_path = os.path.join(
+            "Project 2", "SampleTestCases", "output2final.txt")
+
+        with open(output_file_path, "w") as output_file:
+            output_file.write(f"{alignment_cost}\n")
+            output_file.write(aligns1 + "\n")
+            output_file.write(aligns2 + "\n")
 
 
 except FileNotFoundError:
