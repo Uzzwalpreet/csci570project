@@ -159,7 +159,7 @@ def modify_string(base_string, index):
 
 
 try:
-    with open("Project 2/SampleTestCases/input2.txt", "r") as file1:
+    with open("Project 2/SampleTestCases/input3.txt", "r") as file1:
         lines = file1.readlines()
 
     current_string = ""
@@ -185,7 +185,7 @@ try:
         aligner = SequenceAlignment()
         opt, alignment_cost = aligner.compute_minimum_alignment_cost(
             arr[0], arr[1])
-        print("Alignm,nt cost is", alignment_cost)
+        print("Alignment cost is", alignment_cost)
         aligns1, aligns2 = aligner.reconstruct_alignment(opt, arr[0], arr[1])
         output_file_path = os.path.join(
             "Project 2", "SampleTestCases", "output2final.txt")

@@ -28,7 +28,6 @@ class SequenceAlignmentMemoryEfficient:
         self.mismatch_penalty_table['T']['T'] = 0
 
     def compute_minimum_alignment_cost(self, s1, s2):
-
         m = len(s1) + 1
         n = len(s2) + 1
         opt = [[sys.maxsize] * n for _ in range(m)]
@@ -37,8 +36,8 @@ class SequenceAlignmentMemoryEfficient:
         opt[0][0] = 0
         for i in range(1, m):
             opt[i][0] = i * self.gap_penalty
-        for i in range(1, n):
-            opt[0][i] = i * self.gap_penalty
+        for j in range(1, n):
+            opt[0][j] = j * self.gap_penalty
 
         # DP formula bottom-up
         for i in range(1, m):
@@ -48,6 +47,24 @@ class SequenceAlignmentMemoryEfficient:
                                 opt[i][j - 1] + self.gap_penalty)
 
         return opt
+
+    def space_efficient_alignment(self, s1, s2):
+        m = len(s1) + 1
+        n = len(s2) + 1
+        table = [[sys.maxsize] * n for _ in range(2)]
+
+        for j in range(n):
+            table[0][j] = j * self.gap_penalty
+
+        for i in range(1, m):
+            table[1][0] = i * self.gap_penalty
+            for j in range(1, n):
+                table[1][j] = min(table[0][j - 1] + self.mismatch_penalty_table[s1[i - 1]][s2[j - 1]],
+                                  table[0][j] + self.gap_penalty,
+                                  table[1][j - 1] + self.gap_penalty)
+            table[0] = table[1][:]
+
+        return table[1]
 
     def reconstruct_alignment(self, table, s1, s2):
         i = len(table) - 1
@@ -75,129 +92,69 @@ class SequenceAlignmentMemoryEfficient:
     def divide_and_conquer_alignment(self, s1, s2):
         if len(s1) <= 2 or len(s2) <= 2:
             opt_table = self.compute_minimum_alignment_cost(s1, s2)
-            return self.reconstruct_alignment(opt_table, s1, s2)
-
-        res = []
+            opt_value = opt_table[-1][-1]
+            alignment = self.reconstruct_alignment(opt_table, s1, s2)
+            return opt_value, alignment
 
         s1_mid = len(s1) // 2
-        if s1_mid < 1:  # Ensure left part has at least one character
-            s1_mid = 1
         s1_left_part = s1[:s1_mid]
-        print("The s1 left part is:", s1_left_part)
+        s1_right_part = s1[s1_mid:]
 
         cost_left = self.space_efficient_alignment(s1_left_part, s2)
+        cost_right = self.space_efficient_alignment(s1_right_part[::-1], s2[::-1])
 
-        s1_right_part = s1[s1_mid:]
-        reversed_s1_right_part = s1_right_part[::-1]
-        reversed_s2 = s2[::-1]
-        cost_right = self.space_efficient_alignment(
-            reversed_s1_right_part, reversed_s2)
-
-        print("The cost of left part is:", cost_left)
-        print("The cost of right part is:", cost_right)
-
-        cost = [left + right for left,
-                right in zip(cost_left, reversed(cost_right))]
-        print("******************************")
-        print("The cost of left+right:", cost)
-        print("******************************")
+        cost = [left + right for left, right in zip(cost_left, reversed(cost_right))]
         s2_optimal_divide_length = cost.index(min(cost))
-        opt_value = cost[s2_optimal_divide_length]
-        print("opt index", s2_optimal_divide_length)
-        print("opt_value:", opt_value)
-        print("******************************") 
 
-        res_left = self.divide_and_conquer_alignment(
+        left_opt_value, left_alignment = self.divide_and_conquer_alignment(
             s1_left_part, s2[:s2_optimal_divide_length])
-        res_right = self.divide_and_conquer_alignment(
+        right_opt_value, right_alignment = self.divide_and_conquer_alignment(
             s1_right_part, s2[s2_optimal_divide_length:])
 
-        res.extend(res_right[::-1])
-        res.extend(res_left[::-1])
+        combined_alignment_s1 = left_alignment[0] + right_alignment[0]
+        combined_alignment_s2 = left_alignment[1] + right_alignment[1]
+        opt_value = left_opt_value + right_opt_value
 
-        print("The opt is", opt_value)
-        return opt_value, res
-
-    def space_efficient_alignment(self, s1, s2):
-        m = len(s1) + 1
-        n = len(s2) + 1
-        table = [[sys.maxsize] * n for _ in range(2)]
-
-        for i in range(n):
-            table[0][i] = i * self.gap_penalty
-
-        for i in range(1, m):
-            table[1][0] = i * self.gap_penalty
-            for j in range(1, n):
-                table[1][j] = min(table[0][j - 1] + self.mismatch_penalty_table[s1[i - 1]][s2[j - 1]],
-                                  table[0][j] + self.gap_penalty,
-                                  table[1][j - 1] + self.gap_penalty)
-            table[0] = table[1]
-
-        return table[1]
+        return opt_value, (combined_alignment_s1, combined_alignment_s2)
 
 
 def modify_string(base_string, index):
-    if index < len(base_string)+1:
+    if index < len(base_string):
         new_string = base_string[:index] + base_string + base_string[index:]
     else:
-        # If index is out of bounds, append at the end
         new_string = base_string + base_string
-
     return new_string
-
-# Example usage:
 
 
 try:
-    with open("Project 2/SampleTestCases/input2.txt", "r") as file1:
+    with open("Project 2/SampleTestCases/input3.txt", "r") as file1:
         lines = file1.readlines()
 
     current_string = ""
     output_string = ""
     arr = []
     for line in lines:
-        line = line.strip()  # Remove any extra whitespace or newline characters
-        if line.isalpha():  # This line is a new string
-            if current_string:  # If there's a current string being processed
-
-                # Append the final output of the current string to the array
+        line = line.strip()
+        if line.isalpha():
+            if current_string:
                 arr.append(output_string)
-            current_string = line  # Set new current string
-            output_string = current_string  # Reset output string to current string
-        else:  # This line is an index
+            current_string = line
+            output_string = current_string
+        else:
             index = int(line)
-            output_string = modify_string(output_string, index+1)
+            output_string = modify_string(output_string, index + 1)
 
-    # After finishing all lines, append the last processed string
     if current_string:
-
         arr.append(output_string)
         aligner = SequenceAlignmentMemoryEfficient()
         print("The array is", arr[0], arr[1])
         opt_value, alignment = aligner.divide_and_conquer_alignment(
             arr[0], arr[1])
-        print("The opt value is ", opt_value)
-        # print("The output is", opt_value, alignment)
-        # aligns1, aligns2 = aligner.reconstruct_alignment(opt, arr[0], arr[1])
-        # output_file_path = os.path.join(
-        #     "Project 2", "SampleTestCases", "output2final.txt")
-
-        # with open(output_file_path, "w") as output_file:
-        #     output_file.write(f"{alignment_cost}\n")
-        #     output_file.write(aligns1 + "\n")
-        #     output_file.write(aligns2 + "\n")
+        print(opt_value)
+        print(alignment[0])
+        print(alignment[1])
 
 except FileNotFoundError:
     print("The file was not found. Please check the file path and try again.")
 except Exception as e:
     print(f"An error occurred: {e}")
-
-
-# aligner = SequenceAlignment()
-# s1 = "AGTACGCA"
-# s2 = "TATGC"
-# opt_value, alignment = aligner.divide_and_conquer_alignment(s1, s2)
-# print("Alignment Cost:", opt_value)
-# for pair in alignment:
-#     print(pair[0], pair[1])
