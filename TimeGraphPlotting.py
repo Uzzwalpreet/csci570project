@@ -1,0 +1,21 @@
+import matplotlib.pyplot as plt
+import numpy as np
+ 
+#basic 
+x = [16,64,128,256,384,512,768,1024,1280,1536,2048,2560,3072,3584,3968]
+y = [0.13399124145507812,0.4298686981201172,1.3439655303955078,6.228208541870117,11.420011520385742,20.40410041809082,47.135114669799805,84.51390266418457,131.12688064575195,189.78095054626465,340.3189182281494,534.85107421875,769.0560817718506,1056.8459033966064,1314.1090869903564]
+ 
+# first plot with basic data
+plt.plot(x, y)
+ 
+#efficient
+x1 = [16,64,128,256,384,512,768,1024,1280,1536,2048,3072,3584,3968]
+y1 = []
+ 
+# second plot with x1 and y1 data
+#plt.plot(x1, y1, '-.')
+ 
+plt.xlabel("Length of Input Strings (m+n)")
+plt.ylabel("CPU Ussgae in milliseconds")
+plt.title('Basic vs Effienct Algo Time Line Graph')
+plt.show()
