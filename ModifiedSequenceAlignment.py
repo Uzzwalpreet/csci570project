@@ -148,6 +148,3 @@ except FileNotFoundError:
     print("The file was not found. Please check the file path and try again.")
 except Exception as e:
     print(f"An error occurred: {e}")
-
-
-# Example usage
