@@ -5,21 +5,20 @@ import time
 import psutil
 
 
-class SequenceAlignment:
+class basic:
     def __init__(self):
-        self.gap_penalty = 30
+        self.gap_penalty = 30 #gap penalty predefined cost
         self.mismatch_penalty_table = {}
         self.initialize_penalty_table()
 
     def initialize_penalty_table(self):
-        # Initialize the nested dictionary for mismatch penalties
         chars = ['A', 'C', 'G', 'T']
         for c1 in chars:
             self.mismatch_penalty_table[c1] = {}
             for c2 in chars:
                 self.mismatch_penalty_table[c1][c2] = 0
 
-        # Assign mismatch penalties
+        #mismatch penalties predefined cost
         self.mismatch_penalty_table['A']['A'] = 0
         self.mismatch_penalty_table['A']['C'] = 110
         self.mismatch_penalty_table['A']['G'] = 48
@@ -37,19 +36,24 @@ class SequenceAlignment:
         self.mismatch_penalty_table['T']['G'] = 110
         self.mismatch_penalty_table['T']['T'] = 0
 
+    """
+                                   **CALCULATE ALGINMENT COST**
+    This method reads the input file from a specific location and generate two strings. 
+    Starting with an input string and followed by appending the string at spcific index location read from the file.
+    """
     def compute_minimum_alignment_cost(self, s1, s2):
-        m = len(s1) + 1  # OPT table's row size
-        n = len(s2) + 1  # OPT table's column size
-        opt = [[float('inf')] * n for _ in range(m)]
+        m = len(s1) + 1  
+        n = len(s2) + 1 
+        opt = [[float('inf')] * n for _ in range(m)] #opt[n]x[m] table created
 
-        # Initialize base cases
+        # base case initialization
         opt[0][0] = 0
         for i in range(1, m):
             opt[i][0] = i * self.gap_penalty
         for j in range(1, n):
             opt[0][j] = j * self.gap_penalty
 
-        # Fill the table with the DP formula bottom-up
+        # filling opt table with above defined recurrence formula
         for i in range(1, m):
             for j in range(1, n):
                 opt[i][j] = min(opt[i - 1][j - 1] + self.mismatch_penalty_table[s1[i - 1]][s2[j - 1]],
@@ -87,27 +91,30 @@ class SequenceAlignment:
 
         return aligned_s1, aligned_s2
 
-
+"""
+      **AMOUNT OF MEMORY CONSUMED**
+"""
 def process_memory():
   process = psutil.Process()
   memory_info = process.memory_info()
   memory_consumed = int(memory_info.rss/1024)
   return memory_consumed
 
-def modify_string(base_string, index):
-    if index < len(base_string)+1:
-        new_string = base_string[:index] + base_string + base_string[index:]
-    else:
-        # If index is out of bounds, append at the end
-        new_string = base_string + base_string
-
-    return new_string
-
 """
-**String Generation Method**
+                            **STRING GENERATION METHOD**
 This method reads the input file from a specific location and generate two strings. 
-Starting with an input string and followed by appending the string at spcific index location read from the file.
+Starting with an input string and followed by appending the string at specific index location, read from the file.
 """
+
+def generateString(initialString, index):
+    if index < len(initialString)+1:
+        modifiedstring = initialString[:index] + initialString + initialString[index:]
+    else:
+        # edge case if index > len(initialString) append at end
+        modifiedstring = initialString + initialString
+
+    return modifiedstring
+
 try:
     with open("Project 2/datapoints/in15.txt", "r") as file1:
         lines = file1.readlines()
@@ -122,13 +129,12 @@ try:
             generatedString = line #to set the second string
         else:  # for appending at particular index block
             index = int(line)
-            generatedString = modify_string(generatedString, index+1)
-
+            generatedString = generateString(generatedString, index+1)
     if generatedString: #append the second generated string
         arr.append(generatedString)
         #time
         start_time = time.time()
-        aligner = SequenceAlignment()
+        aligner = basic()
         opt, alignment_cost = aligner.compute_minimum_alignment_cost(
             arr[0], arr[1])
         aligns1, aligns2 = aligner.reconstruct_alignment(opt, arr[0], arr[1])
@@ -143,9 +149,7 @@ try:
             output_file.write(aligns2 + "\n")
             output_file.write(str(time_taken) + "\n")
             output_file.write(str(process_memory()) + "\n")
-
-
 except FileNotFoundError:
-    print("The file was not found. Please check the file path and try again.")
+    print("File not found")
 except Exception as e:
-    print(f"An error occurred: {e}")
+    print(f"Unexpected error occured: {e}")
