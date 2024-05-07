@@ -1,7 +1,9 @@
 from collections import defaultdict
-import sys
 import os
-
+import sys
+from resource import * 
+import time
+import psutil
 
 class SequenceAlignmentMemoryEfficient:
     def __init__(self):
@@ -117,6 +119,11 @@ class SequenceAlignmentMemoryEfficient:
 
         return opt_value, (combined_alignment_s1, combined_alignment_s2)
 
+def process_memory():
+  process = psutil.Process()
+  memory_info = process.memory_info()
+  memory_consumed = int(memory_info.rss/1024)
+  return memory_consumed
 
 def modify_string(base_string, index):
     if index < len(base_string):
@@ -127,33 +134,40 @@ def modify_string(base_string, index):
 
 
 try:
-    with open("Project 2/SampleTestCases/input3.txt", "r") as file1:
+    with open("Project 2/datapoints/in15.txt", "r") as file1:
         lines = file1.readlines()
 
-    current_string = ""
-    output_string = ""
+    generatedString = ""
     arr = []
     for line in lines:
-        line = line.strip()
-        if line.isalpha():
-            if current_string:
-                arr.append(output_string)
-            current_string = line
-            output_string = current_string
-        else:
+        line = line.strip()  # to remove /n
+        if line.isalpha():  
+            if generatedString:  #to append the first generated string
+                arr.append(generatedString)  
+            generatedString = line #to set the second string
+        else:  # for appending at particular index block
             index = int(line)
-            output_string = modify_string(output_string, index + 1)
+            generatedString = modify_string(generatedString, index+1)
 
-    if current_string:
-        arr.append(output_string)
+    if generatedString: #append the second generated string
+        arr.append(generatedString)
+        #time
+        start_time = time.time()
         aligner = SequenceAlignmentMemoryEfficient()
-        print("The array is", arr[0], arr[1])
         opt_value, alignment = aligner.divide_and_conquer_alignment(
             arr[0], arr[1])
-        print(opt_value)
-        print(alignment[0])
-        print(alignment[1])
-
+        output_file_path = os.path.join(
+            "Project 2", "Output", "effic15.txt")
+        print("Combined length of generated string (m+n)", len(arr[0]) + len(arr[1]))
+        memory_consumed = process_memory()
+        end_time = time.time()
+        time_taken = (end_time - start_time) * 1000
+        with open(output_file_path, "w") as output_file:
+            output_file.write(f"{opt_value}\n")
+            output_file.write(alignment[0]+ "\n")
+            output_file.write(alignment[1]+ "\n")
+            output_file.write(str(time_taken) + "\n")
+            output_file.write(str(memory_consumed))
 except FileNotFoundError:
     print("The file was not found. Please check the file path and try again.")
 except Exception as e:
