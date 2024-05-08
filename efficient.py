@@ -1,102 +1,104 @@
-from collections import defaultdict
 import os
 import sys
-from resource import * 
 import time
+from collections import defaultdict
+from resource import *
+
 import psutil
 
-class SequenceAlignmentMemoryEfficient:
+
+class efficient_dna_alignment:
     def __init__(self):
-        self.gap_penalty = 30
-        self.mismatch_penalty_table = defaultdict(lambda: defaultdict(int))
-        self.initialize_penalty_table()
+        self.gap_cost = 30
+        self.mismatch_cost = {
+            "A": {"A": 0, "C": 110, "G": 48, "T": 94},
+            "C": {"A": 110, "C": 0, "G": 118, "T": 48},
+            "G": {"A": 48, "C": 118, "G": 0, "T": 110},
+            "T": {"A": 94, "C": 48, "G": 110, "T": 0},
+        }
 
-    def initialize_penalty_table(self):
-        self.mismatch_penalty_table['A']['A'] = 0
-        self.mismatch_penalty_table['A']['C'] = 110
-        self.mismatch_penalty_table['A']['G'] = 48
-        self.mismatch_penalty_table['A']['T'] = 94
-        self.mismatch_penalty_table['C']['A'] = 110
-        self.mismatch_penalty_table['C']['C'] = 0
-        self.mismatch_penalty_table['C']['G'] = 118
-        self.mismatch_penalty_table['C']['T'] = 48
-        self.mismatch_penalty_table['G']['A'] = 48
-        self.mismatch_penalty_table['G']['C'] = 118
-        self.mismatch_penalty_table['G']['G'] = 0
-        self.mismatch_penalty_table['G']['T'] = 110
-        self.mismatch_penalty_table['T']['A'] = 94
-        self.mismatch_penalty_table['T']['C'] = 48
-        self.mismatch_penalty_table['T']['G'] = 110
-        self.mismatch_penalty_table['T']['T'] = 0
-
-    def compute_minimum_alignment_cost(self, s1, s2):
+    def calculate_cost_of_alignment(self, s1, s2):
         m = len(s1) + 1
         n = len(s2) + 1
         opt = [[sys.maxsize] * n for _ in range(m)]
 
-        # Initialize edge case
         opt[0][0] = 0
         for i in range(1, m):
-            opt[i][0] = i * self.gap_penalty
+            opt[i][0] = i * self.gap_cost
         for j in range(1, n):
-            opt[0][j] = j * self.gap_penalty
+            opt[0][j] = j * self.gap_cost
 
-        # DP formula bottom-up
         for i in range(1, m):
             for j in range(1, n):
-                opt[i][j] = min(opt[i - 1][j - 1] + self.mismatch_penalty_table[s1[i - 1]][s2[j - 1]],
-                                opt[i - 1][j] + self.gap_penalty,
-                                opt[i][j - 1] + self.gap_penalty)
+                opt[i][j] = min(
+                    opt[i - 1][j - 1] + self.mismatch_cost[s1[i - 1]][s2[j - 1]],
+                    opt[i - 1][j] + self.gap_cost,
+                    opt[i][j - 1] + self.gap_cost,
+                )
 
         return opt
 
     def space_efficient_alignment(self, s1, s2):
         m = len(s1) + 1
         n = len(s2) + 1
-        table = [[sys.maxsize] * n for _ in range(2)]
+        opt = [[sys.maxsize] * n for _ in range(2)]
 
         for j in range(n):
-            table[0][j] = j * self.gap_penalty
+            opt[0][j] = j * self.gap_cost
 
         for i in range(1, m):
-            table[1][0] = i * self.gap_penalty
+            opt[1][0] = i * self.gap_cost
             for j in range(1, n):
-                table[1][j] = min(table[0][j - 1] + self.mismatch_penalty_table[s1[i - 1]][s2[j - 1]],
-                                  table[0][j] + self.gap_penalty,
-                                  table[1][j - 1] + self.gap_penalty)
-            table[0] = table[1][:]
+                opt[1][j] = min(
+                    opt[0][j - 1] + self.mismatch_cost[s1[i - 1]][s2[j - 1]],
+                    opt[0][j] + self.gap_cost,
+                    opt[1][j - 1] + self.gap_cost,
+                )
+            opt[0] = opt[1][:]
 
-        return table[1]
+        return opt[1]
 
-    def reconstruct_alignment(self, table, s1, s2):
-        i = len(table) - 1
-        j = len(table[0]) - 1
-
-        alignment_s1 = ""
-        alignment_s2 = ""
+    def generate_efficient_dna_alignment(self, opt, s1, s2):
+        i, j = len(s1), len(s2)
+        opt_alignment_s1 = ""
+        opt_alignment_s2 = ""
         while i > 0 or j > 0:
-            if j > 0 and table[i][j] == (table[i][j - 1] + self.gap_penalty):
-                alignment_s1 = '_' + alignment_s1
-                alignment_s2 = s2[j - 1] + alignment_s2
-                j -= 1
-            elif i > 0 and j > 0 and table[i][j] == (table[i - 1][j - 1] + self.mismatch_penalty_table[s1[i - 1]][s2[j - 1]]):
-                alignment_s1 = s1[i - 1] + alignment_s1
-                alignment_s2 = s2[j - 1] + alignment_s2
+            if (
+                i > 0
+                and j > 0
+                and opt[i][j]
+                == opt[i - 1][j - 1] + self.mismatch_cost[s1[i - 1]][s2[j - 1]]
+            ):
+                opt_alignment_s1 = s1[i - 1] + opt_alignment_s1
+                opt_alignment_s2 = s2[j - 1] + opt_alignment_s2
                 i -= 1
                 j -= 1
-            elif i > 0 and table[i][j] == (table[i - 1][j] + self.gap_penalty):
-                alignment_s1 = s1[i - 1] + alignment_s1
-                alignment_s2 = '_' + alignment_s2
+            elif i > 0 and opt[i][j] == opt[i - 1][j] + self.gap_cost:
+                opt_alignment_s1 = s1[i - 1] + opt_alignment_s1
+                opt_alignment_s2 = "_" + opt_alignment_s2
                 i -= 1
+            elif j > 0 and opt[i][j] == opt[i][j - 1] + self.gap_cost:
+                opt_alignment_s1 = "_" + opt_alignment_s1
+                opt_alignment_s2 = s2[j - 1] + opt_alignment_s2
+                j -= 1
 
-        return alignment_s1, alignment_s2
+        while i > 0:
+            opt_alignment_s1 = opt_alignment_s1 + s1[i - 1]
+            opt_alignment_s2 = opt_alignment_s2 + "_"
+            i -= 1
+        while j > 0:
+            opt_alignment_s1 = opt_alignment_s1 + "_"
+            opt_alignment_s2 = opt_alignment_s2 + s2[j - 1]
+            j -= 1
 
-    def divide_and_conquer_alignment(self, s1, s2):
+        return opt_alignment_s1, opt_alignment_s2
+
+    def divide_and_conquer(self, s1, s2):
         if len(s1) <= 2 or len(s2) <= 2:
-            opt_table = self.compute_minimum_alignment_cost(s1, s2)
-            opt_value = opt_table[-1][-1]
-            alignment = self.reconstruct_alignment(opt_table, s1, s2)
-            return opt_value, alignment
+            opt = self.calculate_cost_of_alignment(s1, s2)
+            opt_alignment_cost = opt[-1][-1]
+            alignment = self.generate_efficient_dna_alignment(opt, s1, s2)
+            return opt_alignment_cost, alignment
 
         s1_mid = len(s1) // 2
         s1_left_part = s1[:s1_mid]
@@ -108,67 +110,78 @@ class SequenceAlignmentMemoryEfficient:
         cost = [left + right for left, right in zip(cost_left, reversed(cost_right))]
         s2_optimal_divide_length = cost.index(min(cost))
 
-        left_opt_value, left_alignment = self.divide_and_conquer_alignment(
-            s1_left_part, s2[:s2_optimal_divide_length])
-        right_opt_value, right_alignment = self.divide_and_conquer_alignment(
-            s1_right_part, s2[s2_optimal_divide_length:])
+        left_opt_alignment_cost, left_alignment = self.divide_and_conquer(
+            s1_left_part, s2[:s2_optimal_divide_length]
+        )
+        right_opt_alignment_cost, right_alignment = self.divide_and_conquer(
+            s1_right_part, s2[s2_optimal_divide_length:]
+        )
 
         combined_alignment_s1 = left_alignment[0] + right_alignment[0]
         combined_alignment_s2 = left_alignment[1] + right_alignment[1]
-        opt_value = left_opt_value + right_opt_value
+        opt_alignment_cost = left_opt_alignment_cost + right_opt_alignment_cost
 
-        return opt_value, (combined_alignment_s1, combined_alignment_s2)
+        return opt_alignment_cost, (combined_alignment_s1, combined_alignment_s2)
+
 
 def process_memory():
-  process = psutil.Process()
-  memory_info = process.memory_info()
-  memory_consumed = int(memory_info.rss/1024)
-  return memory_consumed
+    process = psutil.Process()
+    memory_info = process.memory_info()
+    memory_consumed = int(memory_info.rss / 1024)
+    return memory_consumed
 
-def modify_string(base_string, index):
-    if index < len(base_string):
-        new_string = base_string[:index] + base_string + base_string[index:]
-    else:
-        new_string = base_string + base_string
-    return new_string
+
+def generateString(initialString, index):
+    if index < len(initialString) + 1:
+        modifiedstring = initialString[:index] + initialString + initialString[index:]
+    return modifiedstring
 
 
 try:
-    with open("Project 2/datapoints/in15.txt", "r") as file1:
+
+    if len(sys.argv) < 3:
+        print("Please enter the input file path and output file path")
+        sys.exit(1)
+
+    inFilePath = sys.argv[1]
+    opFilePath = sys.argv[2]
+
+    with open(inFilePath, "r") as file1:
         lines = file1.readlines()
 
     generatedString = ""
-    arr = []
+    generatedStringArray = []
     for line in lines:
-        line = line.strip()  # to remove /n
-        if line.isalpha():  
-            if generatedString:  #to append the first generated string
-                arr.append(generatedString)  
-            generatedString = line #to set the second string
-        else:  # for appending at particular index block
+        line = line.strip()
+        if line.isalpha():
+            if generatedString:  # to append the first generated string
+                generatedStringArray.append(generatedString)
+            generatedString = line
+        else:
             index = int(line)
-            generatedString = modify_string(generatedString, index+1)
+            generatedString = generateString(generatedString, index + 1)
 
-    if generatedString: #append the second generated string
-        arr.append(generatedString)
-        #time
+    if generatedString:  # append the second generated string
+        generatedStringArray.append(generatedString)
         start_time = time.time()
-        aligner = SequenceAlignmentMemoryEfficient()
-        opt_value, alignment = aligner.divide_and_conquer_alignment(
-            arr[0], arr[1])
-        output_file_path = os.path.join(
-            "Project 2", "Output", "effic15.txt")
-        print("Combined length of generated string (m+n)", len(arr[0]) + len(arr[1]))
+        efficient_dna_alignment_obj = efficient_dna_alignment()
+        opt_alignment_cost, opt_aligned_strings = (
+            efficient_dna_alignment_obj.divide_and_conquer(
+                generatedStringArray[0], generatedStringArray[1]
+            )
+        )
+        output_file_path = os.path.join(opFilePath)
         memory_consumed = process_memory()
         end_time = time.time()
         time_taken = (end_time - start_time) * 1000
         with open(output_file_path, "w") as output_file:
-            output_file.write(f"{opt_value}\n")
-            output_file.write(alignment[0]+ "\n")
-            output_file.write(alignment[1]+ "\n")
+            output_file.write(f"{opt_alignment_cost}\n")
+            output_file.write(opt_aligned_strings[0] + "\n")
+            output_file.write(opt_aligned_strings[1] + "\n")
             output_file.write(str(time_taken) + "\n")
             output_file.write(str(memory_consumed))
+
 except FileNotFoundError:
-    print("The file was not found. Please check the file path and try again.")
+    print("File not found")
 except Exception as e:
-    print(f"An error occurred: {e}")
+    print(f"Unexpected error occured: {e}")
