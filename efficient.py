@@ -31,14 +31,14 @@ class efficient_dna_alignment:
         for i in range(1, m):
             for j in range(1, n):
                 opt[i][j] = min(
-                    opt[i - 1][j - 1] + self.mismatch_cost[s1[i - 1]][s2[j - 1]],
                     opt[i - 1][j] + self.gap_cost,
                     opt[i][j - 1] + self.gap_cost,
+                    opt[i - 1][j - 1] + self.mismatch_cost[s1[i - 1]][s2[j - 1]]
                 )
 
         return opt
 
-    def space_efficient_alignment(self, s1, s2):
+    def space_optimization_alignment(self, s1, s2):
         m = len(s1) + 1
         n = len(s2) + 1
         opt = [[sys.maxsize] * n for _ in range(2)]
@@ -50,9 +50,9 @@ class efficient_dna_alignment:
             opt[1][0] = i * self.gap_cost
             for j in range(1, n):
                 opt[1][j] = min(
-                    opt[0][j - 1] + self.mismatch_cost[s1[i - 1]][s2[j - 1]],
                     opt[0][j] + self.gap_cost,
                     opt[1][j - 1] + self.gap_cost,
+                    opt[0][j - 1] + self.mismatch_cost[s1[i - 1]][s2[j - 1]]
                 )
             opt[0] = opt[1][:]
 
@@ -101,25 +101,27 @@ class efficient_dna_alignment:
             return opt_alignment_cost, alignment
 
         s1_mid = len(s1) // 2
-        s1_left_part = s1[:s1_mid]
-        s1_right_part = s1[s1_mid:]
+        s1_left_half = s1[:s1_mid]
+        s1_right_half = s1[s1_mid:]
 
-        cost_left = self.space_efficient_alignment(s1_left_part, s2)
-        cost_right = self.space_efficient_alignment(s1_right_part[::-1], s2[::-1])
+        cost_left_half = self.space_optimization_alignment(s1_left_half, s2)
+        cost_right_half = self.space_optimization_alignment(
+            s1_right_half[::-1], s2[::-1])
 
-        cost = [left + right for left, right in zip(cost_left, reversed(cost_right))]
+        cost = [left + right for left,
+                right in zip(cost_left_half, reversed(cost_right_half))]
         s2_optimal_divide_length = cost.index(min(cost))
 
-        left_opt_alignment_cost, left_alignment = self.divide_and_conquer(
-            s1_left_part, s2[:s2_optimal_divide_length]
+        left_opt_cost, left_alignment = self.divide_and_conquer(
+            s1_left_half, s2[:s2_optimal_divide_length]
         )
-        right_opt_alignment_cost, right_alignment = self.divide_and_conquer(
-            s1_right_part, s2[s2_optimal_divide_length:]
+        right_opt_cost, right_alignment = self.divide_and_conquer(
+            s1_right_half, s2[s2_optimal_divide_length:]
         )
 
         combined_alignment_s1 = left_alignment[0] + right_alignment[0]
         combined_alignment_s2 = left_alignment[1] + right_alignment[1]
-        opt_alignment_cost = left_opt_alignment_cost + right_opt_alignment_cost
+        opt_alignment_cost = left_opt_cost + right_opt_cost
 
         return opt_alignment_cost, (combined_alignment_s1, combined_alignment_s2)
 
@@ -133,7 +135,8 @@ def process_memory():
 
 def generateString(initialString, index):
     if index < len(initialString) + 1:
-        modifiedstring = initialString[:index] + initialString + initialString[index:]
+        modifiedstring = initialString[:index] + \
+            initialString + initialString[index:]
     return modifiedstring
 
 
